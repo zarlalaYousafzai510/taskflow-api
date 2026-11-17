@@ -25,6 +25,7 @@ class TicketApiTest extends TestCase
     public function test_protected_routes_reject_requests_without_a_token(): void
     {
         $this->getJson('/api/tickets')->assertUnauthorized()->assertJson(['message' => 'Unauthenticated.']);
+        $this->get('/api/tickets')->assertUnauthorized()->assertExactJson(['message' => 'Unauthenticated.']);
     }
 
     public function test_ticket_crud_validates_fields_and_returns_expected_statuses(): void
