@@ -1,6 +1,6 @@
 # Authenticated Ticket REST API
 
-A Laravel 12 REST API for creating and managing tickets. It uses SQLite for storage and JWT bearer tokens for authentication. Every ticket belongs to its creating user; users can only list, read, update, or delete their own tickets.
+A Laravel 12 REST API for creating and managing tickets. It uses SQLite for storage and JWT bearer tokens for authentication. Customers can create and view their own tickets; agents can view all tickets and update or delete tickets.
 
 ## Requirements
 
@@ -29,7 +29,13 @@ The API will be available at `http://127.0.0.1:8000/api`. Laravel adds the `/api
 
 ## Authentication
 
-Register a user, or log in with an existing user's email and password. Login returns a JWT in the `token` field. Send it on every protected request as `Authorization: Bearer <token>` and send `Accept: application/json`.
+Register a user with an explicit `customer` or `agent` role, or log in with an existing user's email and password. Registration hashes the password and returns a JWT. Login returns a JWT in the `token` field. Send it on every protected request as `Authorization: Bearer <token>` and send `Accept: application/json`. Registration accepts either role for this learning project; a production service should restrict agent provisioning to an administrator.
+
+```sh
+curl -X POST http://127.0.0.1:8000/api/register \
+  -H "Accept: application/json" -H "Content-Type: application/json" \
+  -d '{"name":"Customer One","email":"customer@example.com","password":"password123","role":"customer"}'
+```
 
 ```sh
 curl -X POST http://127.0.0.1:8000/api/auth/login \
@@ -45,11 +51,13 @@ All ticket routes require a valid bearer token. JSON validation errors return `4
 
 | Method | Endpoint | Result |
 | --- | --- | --- |
-| GET | `/api/tickets` | List the authenticated user's tickets (`200`) |
-| POST | `/api/tickets` | Create a ticket (`201`) |
-| GET | `/api/tickets/{id}` | Read one owned ticket (`200`) |
-| PUT | `/api/tickets/{id}` | Update one owned ticket (`200`) |
-| DELETE | `/api/tickets/{id}` | Delete one owned ticket (`200`) |
+| GET | `/api/tickets` | Customer: list own tickets; agent: list all tickets (`200`) |
+| POST | `/api/tickets` | Customer: create a ticket (`201`); agent forbidden (`403`) |
+| GET | `/api/tickets/{id}` | Customer: read own ticket; agent: read any ticket (`200`; inaccessible/missing is `404`) |
+| PUT | `/api/tickets/{id}` | Agent: update any ticket (`200`); customer forbidden (`403`) |
+| DELETE | `/api/tickets/{id}` | Agent: delete any ticket (`200`); customer forbidden (`403`) |
+
+JWT authentication (`auth:api`) runs before the `role` middleware. The role middleware rejects callers without the required role (`403`). Ticket ownership is enforced in the query itself, so a customer requesting another customer's ticket receives `404` without learning whether it exists. `user_id` always comes from the authenticated customer token.
 
 Ticket fields:
 
@@ -68,12 +76,21 @@ curl -X POST http://127.0.0.1:8000/api/tickets \
   -d '{"title":"Login issue","description":"Cannot sign in","status":"open"}'
 ```
 
-Update a ticket by sending a `PUT` request with any valid subset of the ticket fields. Ticket records are defined by the `Ticket` model and migrations in `database/migrations`; API routes are in `routes/api.php`, with validation and CRUD logic in `TicketController`.
+Customers can create tickets using the example above. Agents can update a ticket with any valid subset of the ticket fields. Ticket records are defined by the `Ticket` model and migrations in `database/migrations`; API routes are in `routes/api.php`, role checks are in `app/Http/Middleware/RequireRole.php`, and validation/access logic is in `TicketController`.
+
+Example agent inbox request (replace the token with a JWT for an agent account):
+
+```sh
+curl http://127.0.0.1:8000/api/tickets \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer AGENT_TOKEN"
+```
 
 ## Project structure
 
 - `app/Models/Ticket.php` — ticket model and mass assignable fields
 - `database/migrations/` — users and tickets schema
+- `app/Http/Middleware/RequireRole.php` — role authorization middleware
 - `routes/api.php` — authentication and ticket API routes
 - `app/Http/Controllers/AuthController.php` — registration and JWT login
 - `app/Http/Controllers/TicketController.php` — validated, user-scoped ticket CRUD

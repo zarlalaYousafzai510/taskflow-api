@@ -11,7 +11,11 @@ class TicketController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        return response()->json($request->user()->tickets()->latest()->get());
+        $tickets = $request->user()->role === 'agent'
+            ? Ticket::query()->latest()->get()
+            : $request->user()->tickets()->latest()->get();
+
+        return response()->json($tickets);
     }
 
     public function store(Request $request): JsonResponse
@@ -67,6 +71,11 @@ class TicketController extends Controller
 
     private function findForUser(Request $request, int $id): Ticket
     {
-        return $request->user()->tickets()->findOrFail($id);
+        $query = Ticket::query();
+        if ($request->user()->role !== 'agent') {
+            $query->where('user_id', $request->user()->id);
+        }
+
+        return $query->findOrFail($id);
     }
 }

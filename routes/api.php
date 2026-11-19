@@ -18,10 +18,13 @@ Route::middleware('auth:api')->group(function () {
         return $request->user();
     });
 
-    Route::get('/tickets', [TicketController::class, 'index']);
-    Route::post('/tickets', [TicketController::class, 'store']);
-    Route::get('/tickets/{id}', [TicketController::class, 'show']);
-    Route::put('/tickets/{id}', [TicketController::class, 'update']);
-    Route::delete('/tickets/{id}', [TicketController::class, 'destroy']);
+    Route::middleware('role:customer,agent')->group(function () {
+        Route::get('/tickets', [TicketController::class, 'index']);
+        Route::get('/tickets/{id}', [TicketController::class, 'show']);
+    });
+
+    Route::middleware('role:customer')->post('/tickets', [TicketController::class, 'store']);
+    Route::middleware('role:agent')->put('/tickets/{id}', [TicketController::class, 'update']);
+    Route::middleware('role:agent')->delete('/tickets/{id}', [TicketController::class, 'destroy']);
 
 });

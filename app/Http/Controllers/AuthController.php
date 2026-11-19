@@ -13,6 +13,7 @@ class AuthController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'max:255'],
+            'role' => ['required', 'string', 'in:customer,agent'],
         ]);
 
         if ($validator->fails()) {
@@ -25,13 +26,14 @@ class AuthController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'role' => $request->role,
         ]);
 
         $token = auth('api')->login($user);
 
         return response()->json([
             'message' => 'User registered successfully',
-            'user' => $user,
+            'user' => $user->only(['id', 'name', 'email', 'role']),
             'token' => $token,
         ], 201);
     }
