@@ -8,7 +8,11 @@ The OpenAPI 3.0 specification is [`public/openapi.yaml`](public/openapi.yaml). L
 
 In Swagger UI, expand `POST /auth/login` (or `POST /register`), execute it, copy the returned `token`, click **Authorize**, and paste the token without the `Bearer ` prefix. Swagger UI applies the bearer scheme to protected requests. The UI assets are loaded from the Swagger UI 5.x CDN, so a browser viewing `/docs` needs internet access.
 
-After deploying the Laravel app, the documentation URL is `https://YOUR_API_HOST/docs` and the specification is `https://YOUR_API_HOST/openapi.yaml`. Configure the deployment's document root and PHP entry point for Laravel as usual; the API is Laravel, so it must run on a PHP-capable host rather than PythonAnywhere's standard Python web-app setup.
+### Deploy to Render
+
+This Laravel app is configured for Render's Docker runtime in [`Dockerfile`](Dockerfile) and [`render.yaml`](render.yaml). The Blueprint creates a web service and PostgreSQL database, uses generated production secrets, and runs pending migrations when the service starts. In Render, choose **New → Blueprint Instance**, select this GitHub repository and the `master` branch, then apply the Blueprint. After it finishes deploying, open `https://YOUR-SERVICE.onrender.com/docs` and `https://YOUR-SERVICE.onrender.com/openapi.yaml`.
+
+Render's free web services can sleep after 15 minutes without traffic, and a free Postgres database expires after 30 days. This is suitable for a short demonstration, not durable production hosting. The project uses Laravel/PHP, so the PythonAnywhere Python WSGI setup in some task examples does not host this application directly; use a PHP host such as Render and confirm the alternate live URL with your supervisor.
 
 ## Requirements
 
