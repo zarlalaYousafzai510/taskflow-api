@@ -1,0 +1,326 @@
+openapi: 3.0.3
+info:
+  title: TaskFlow Ticketing API
+  version: 1.0.0
+  description: >-
+    Ticket support API. Register or log in to receive a JWT, then click Authorize
+    and enter the token. The security scheme adds the Bearer prefix for you.
+servers:
+  - url: /api
+    description: This Laravel application
+tags:
+  - name: Authentication
+  - name: Users
+  - name: Tickets
+paths:
+  /register:
+    post:
+      tags: [Authentication]
+      summary: Register a customer or agent account
+      operationId: register
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              name: Customer One
+              email: customer@example.com
+              password: password123
+              role: customer
+      responses:
+        '201':
+          description: Account created and JWT issued
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, user, token]
+                properties:
+                  message: { type: string, example: User registered successfully }
+                  user: { $ref: '#/components/schemas/User' }
+                  token: { type: string, description: JWT access token }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+  /login:
+    post:
+      tags: [Authentication]
+      summary: Log in (legacy alias)
+      operationId: loginAlias
+      security: []
+      requestBody:
+        $ref: '#/components/requestBodies/Login'
+      responses:
+        '200':
+          $ref: '#/components/responses/LoginSuccess'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Log in and obtain a JWT
+      operationId: login
+      security: []
+      requestBody:
+        $ref: '#/components/requestBodies/Login'
+      responses:
+        '200':
+          $ref: '#/components/responses/LoginSuccess'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /user:
+    get:
+      tags: [Users]
+      summary: Get the authenticated user's profile
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Authenticated user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /tickets:
+    get:
+      tags: [Tickets]
+      summary: List tickets visible to the current user
+      description: Customers see their own tickets; agents see all tickets.
+      operationId: listTickets
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Ticket list, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Ticket' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Tickets]
+      summary: Create a ticket as a customer
+      operationId: createTicket
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTicketRequest' }
+            example:
+              title: Login issue
+              description: Cannot sign in
+              status: open
+      responses:
+        '201':
+          description: Ticket created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ticket' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tickets/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Numeric ticket ID
+        schema: { type: integer, minimum: 1 }
+    get:
+      tags: [Tickets]
+      summary: Get one ticket
+      description: Customers can access their own tickets; agents can access any ticket.
+      operationId: getTicket
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Ticket details
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ticket' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Tickets]
+      summary: Update a ticket as an agent
+      operationId: updateTicket
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTicketRequest' }
+            example:
+              status: closed
+      responses:
+        '200':
+          description: Ticket updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ticket' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Tickets]
+      summary: Delete a ticket as an agent
+      operationId: deleteTicket
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Ticket deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: Ticket deleted successfully. }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Paste the token returned by register or login; do not add "Bearer ".
+  requestBodies:
+    Login:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/LoginRequest' }
+          example:
+            email: customer@example.com
+            password: password123
+  responses:
+    LoginSuccess:
+      description: Login successful; copy token into Authorize
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [message, token, token_type, expires_in]
+            properties:
+              message: { type: string, example: Login successful }
+              token: { type: string, description: JWT access token }
+              token_type: { type: string, example: bearer }
+              expires_in: { type: integer, description: Token lifetime in seconds, example: 3600 }
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: { type: string, example: The given data was invalid. }
+              errors:
+                type: object
+                additionalProperties:
+                  type: array
+                  items: { type: string }
+    Unauthorized:
+      description: Missing/invalid token or invalid login credentials
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: { type: string, example: Unauthenticated. }
+              error: { type: string, example: Invalid email or password }
+    Forbidden:
+      description: Authenticated user does not have the required role
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: { type: string, example: Forbidden. }
+    NotFound:
+      description: Ticket does not exist or is not visible to this customer
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: { type: string, example: Resource not found. }
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [name, email, password, role]
+      properties:
+        name: { type: string, maxLength: 255 }
+        email: { type: string, format: email, maxLength: 255 }
+        password: { type: string, format: password, minLength: 8, maxLength: 255 }
+        role: { type: string, enum: [customer, agent] }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+    User:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        name: { type: string, example: Customer One }
+        email: { type: string, format: email, example: customer@example.com }
+        role: { type: string, enum: [customer, agent] }
+        created_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, nullable: true }
+    CreateTicketRequest:
+      type: object
+      required: [title, description]
+      properties:
+        title: { type: string, maxLength: 255 }
+        description: { type: string, maxLength: 10000 }
+        status: { type: string, enum: [open, closed], default: open }
+    UpdateTicketRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string, maxLength: 255 }
+        description: { type: string, maxLength: 10000 }
+        status: { type: string, enum: [open, closed] }
+    Ticket:
+      type: object
+      properties:
+        id: { type: integer, example: 12 }
+        user_id: { type: integer, example: 1 }
+        title: { type: string, example: Login issue }
+        description: { type: string, example: Cannot sign in }
+        status: { type: string, enum: [open, closed], example: open }
+        created_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, nullable: true }

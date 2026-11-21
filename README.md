@@ -2,6 +2,14 @@
 
 A Laravel 12 REST API for creating and managing tickets. It uses SQLite for storage and JWT bearer tokens for authentication. Customers can create and view their own tickets; agents can view all tickets and update or delete tickets.
 
+## Interactive API documentation
+
+The OpenAPI 3.0 specification is [`public/openapi.yaml`](public/openapi.yaml). Laravel serves it at `/openapi.yaml`, and the Swagger UI page at `/docs` loads that same-host specification. Locally, open [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
+
+In Swagger UI, expand `POST /auth/login` (or `POST /register`), execute it, copy the returned `token`, click **Authorize**, and paste the token without the `Bearer ` prefix. Swagger UI applies the bearer scheme to protected requests. The UI assets are loaded from the Swagger UI 5.x CDN, so a browser viewing `/docs` needs internet access.
+
+After deploying the Laravel app, the documentation URL is `https://YOUR_API_HOST/docs` and the specification is `https://YOUR_API_HOST/openapi.yaml`. Configure the deployment's document root and PHP entry point for Laravel as usual; the API is Laravel, so it must run on a PHP-capable host rather than PythonAnywhere's standard Python web-app setup.
+
 ## Requirements
 
 - PHP 8.2 or newer with PDO SQLite enabled
