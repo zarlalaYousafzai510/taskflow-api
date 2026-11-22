@@ -1,0 +1,25 @@
+# Keep Wasmer's Laravel runtime setup, but make its release migration
+# non-interactive in production.
+load("//anybuild/tools:laravel.bzl", "laravel_build", "laravel_config", "laravel_serve")
+
+config = laravel_config(
+    schema = 1,
+    node_package_manager = "npm",
+    node_build_command = "npm run build",
+    node_version = "24",
+    php_framework = "laravel",
+    phpix = True,
+    composer_enable = True,
+    composer_build_script = "post-update-cmd",
+    php_version = "8.3.29",
+    php_public_dir = "public",
+)
+
+build = laravel_build(config)
+
+laravel_serve(
+    config,
+    build,
+    name = "taskflow-api",
+    extra_commands = {"after_deploy": "php artisan migrate --force"},
+)
