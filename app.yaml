@@ -1,0 +1,17 @@
+kind: wasmer.io/App.v0
+owner: zarlalayusufzai
+name: taskflow-api
+package: .
+
+jobs:
+  - name: migrate-database
+    trigger: pre-deployment
+    retries: 2
+    timeout: 5m
+    action:
+      execute:
+        command: php
+        cli_args:
+          - artisan
+          - migrate
+          - --force
