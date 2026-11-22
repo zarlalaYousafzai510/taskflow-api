@@ -6,13 +6,18 @@ A Laravel 12 REST API for creating and managing tickets. It uses SQLite for stor
 
 The OpenAPI 3.0 specification is [`public/openapi.yaml`](public/openapi.yaml). Laravel serves it at `/openapi.yaml`, and the Swagger UI page at `/docs` loads that same-host specification. Locally, open [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
 
+Live deployment on Wasmer:
+
+- [Interactive Swagger UI](https://taskflow-api.wasmer.app/docs)
+- [OpenAPI YAML specification](https://taskflow-api.wasmer.app/openapi.yaml)
+
 In Swagger UI, expand `POST /auth/login` (or `POST /register`), execute it, copy the returned `token`, click **Authorize**, and paste the token without the `Bearer ` prefix. Swagger UI applies the bearer scheme to protected requests. The UI assets are loaded from the Swagger UI 5.x CDN, so a browser viewing `/docs` needs internet access.
 
-### Deploy to Render
+### Deployment
 
-This Laravel app is configured for Render's Docker runtime in [`Dockerfile`](Dockerfile) and [`render.yaml`](render.yaml). The Blueprint creates a web service and PostgreSQL database, uses generated production secrets, and runs pending migrations when the service starts. In Render, choose **New → Blueprint Instance**, select this GitHub repository and the `master` branch, then apply the Blueprint. After it finishes deploying, open `https://YOUR-SERVICE.onrender.com/docs` and `https://YOUR-SERVICE.onrender.com/openapi.yaml`.
+The application is deployed on Wasmer at [https://taskflow-api.wasmer.app](https://taskflow-api.wasmer.app). The Laravel app serves the interactive docs at `/docs` and the OpenAPI spec at `/openapi.yaml`. The Wasmer application is configured to deploy from the connected GitHub repository when changes are pushed.
 
-Render's free web services can sleep after 15 minutes without traffic, and a free Postgres database expires after 30 days. This is suitable for a short demonstration, not durable production hosting. The project uses Laravel/PHP, so the PythonAnywhere Python WSGI setup in some task examples does not host this application directly; use a PHP host such as Render and confirm the alternate live URL with your supervisor.
+The project uses Laravel/PHP, so the PythonAnywhere Python WSGI setup mentioned in some task examples does not host this application directly. Use the live Wasmer URLs above for this deployment.
 
 ## Requirements
 
