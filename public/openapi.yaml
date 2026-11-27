@@ -209,6 +209,40 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /tickets/{id}/reply:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Numeric ticket ID
+        schema: { type: integer, minimum: 1 }
+    post:
+      tags: [Tickets]
+      summary: Add an agent reply to a ticket
+      operationId: replyToTicket
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateReplyRequest' }
+            example:
+              message: We have reset your account. Please try signing in again.
+      responses:
+        '201':
+          description: Reply created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TicketReply' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 components:
   securitySchemes:
     bearerAuth:
@@ -322,5 +356,23 @@ components:
         title: { type: string, example: Login issue }
         description: { type: string, example: Cannot sign in }
         status: { type: string, enum: [open, closed], example: open }
+        created_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, nullable: true }
+        replies:
+          type: array
+          items: { $ref: '#/components/schemas/TicketReply' }
+    CreateReplyRequest:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string, maxLength: 10000 }
+    TicketReply:
+      type: object
+      properties:
+        id: { type: integer, example: 4 }
+        ticket_id: { type: integer, example: 12 }
+        user_id: { type: integer, example: 2 }
+        message: { type: string, example: We have reset your account. Please try signing in again. }
+        user: { $ref: '#/components/schemas/User' }
         created_at: { type: string, format: date-time, nullable: true }
         updated_at: { type: string, format: date-time, nullable: true }

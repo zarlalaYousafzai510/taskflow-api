@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
 
 class TicketApiTest extends TestCase
@@ -45,9 +46,14 @@ class TicketApiTest extends TestCase
         $id = $created->json('id');
         $this->getJson('/api/tickets', $headers)->assertOk()->assertJsonCount(1);
         $this->getJson("/api/tickets/{$id}", $headers)->assertOk()->assertJsonPath('title', 'Account issue');
-        $this->putJson("/api/tickets/{$id}", ['status' => 'closed'], $headers)->assertOk()->assertJsonPath('status', 'closed');
-        $this->putJson("/api/tickets/{$id}", ['status' => 'invalid'], $headers)->assertStatus(400)->assertJsonValidationErrors('status');
-        $this->deleteJson("/api/tickets/{$id}", [], $headers)->assertOk();
+        $agent = User::factory()->create(['role' => 'agent']);
+        $agentHeaders = ['Authorization' => 'Bearer '.auth('api')->login($agent)];
+        Auth::forgetGuards();
+        $this->putJson("/api/tickets/{$id}", ['status' => 'closed'], $agentHeaders)->assertOk()->assertJsonPath('status', 'closed');
+        Auth::forgetGuards();
+        $this->putJson("/api/tickets/{$id}", ['status' => 'invalid'], $agentHeaders)->assertStatus(400)->assertJsonValidationErrors('status');
+        Auth::forgetGuards();
+        $this->deleteJson("/api/tickets/{$id}", [], $agentHeaders)->assertOk();
         $this->getJson("/api/tickets/{$id}", $headers)->assertNotFound();
     }
 
@@ -64,5 +70,47 @@ class TicketApiTest extends TestCase
         $token = auth('api')->login($otherUser);
 
         $this->getJson("/api/tickets/{$ticket->id}", ['Authorization' => "Bearer {$token}"])->assertNotFound();
+    }
+
+    public function test_agents_can_reply_and_ticket_responses_include_reply_history(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        $agent = User::factory()->create(['role' => 'agent']);
+        $ticket = Ticket::create([
+            'title' => 'Account issue',
+            'description' => 'Cannot sign in',
+            'status' => 'open',
+            'user_id' => $customer->id,
+        ]);
+        $agentHeaders = ['Authorization' => 'Bearer '.auth('api')->login($agent)];
+        $this->postJson("/api/tickets/{$ticket->id}/reply", ['message' => 'Please try again.'], $agentHeaders)
+            ->assertCreated()
+            ->assertJsonPath('message', 'Please try again.')
+            ->assertJsonPath('user.role', 'agent');
+
+        Auth::forgetGuards();
+        $this->getJson('/api/tickets', $agentHeaders)
+            ->assertOk()
+            ->assertJsonPath('0.replies.0.message', 'Please try again.');
+
+        Auth::forgetGuards();
+        $this->postJson("/api/tickets/{$ticket->id}/reply", ['message' => '  '], $agentHeaders)
+            ->assertStatus(400)
+            ->assertJsonValidationErrors(['message']);
+    }
+
+    public function test_customers_cannot_reply_to_tickets(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        $ticket = Ticket::create([
+            'title' => 'Account issue',
+            'description' => 'Cannot sign in',
+            'status' => 'open',
+            'user_id' => $customer->id,
+        ]);
+        $customerHeaders = ['Authorization' => 'Bearer '.auth('api')->login($customer)];
+
+        $this->postJson("/api/tickets/{$ticket->id}/reply", ['message' => 'Please try again.'], $customerHeaders)
+            ->assertForbidden();
     }
 }

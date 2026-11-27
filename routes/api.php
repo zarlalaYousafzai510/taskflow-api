@@ -25,6 +25,7 @@ Route::middleware('auth:api')->group(function () {
 
     Route::middleware('role:customer')->post('/tickets', [TicketController::class, 'store']);
     Route::middleware('role:agent')->put('/tickets/{id}', [TicketController::class, 'update']);
+    Route::middleware('role:agent')->post('/tickets/{id}/reply', [TicketController::class, 'reply']);
     Route::middleware('role:agent')->delete('/tickets/{id}', [TicketController::class, 'destroy']);
 
 });

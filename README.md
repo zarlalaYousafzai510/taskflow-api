@@ -70,7 +70,8 @@ All ticket routes require a valid bearer token. JSON validation errors return `4
 | --- | --- | --- |
 | GET | `/api/tickets` | Customer: list own tickets; agent: list all tickets (`200`) |
 | POST | `/api/tickets` | Customer: create a ticket (`201`); agent forbidden (`403`) |
-| GET | `/api/tickets/{id}` | Customer: read own ticket; agent: read any ticket (`200`; inaccessible/missing is `404`) |
+| GET | `/api/tickets/{id}` | Customer: read own ticket; agent: read any ticket, including replies (`200`; inaccessible/missing is `404`) |
+| POST | `/api/tickets/{id}/reply` | Agent: add a reply to a ticket; customers are forbidden (`201`) |
 | PUT | `/api/tickets/{id}` | Agent: update any ticket (`200`); customer forbidden (`403`) |
 | DELETE | `/api/tickets/{id}` | Agent: delete any ticket (`200`); customer forbidden (`403`) |
 
@@ -111,3 +112,18 @@ curl http://127.0.0.1:8000/api/tickets \
 - `routes/api.php` — authentication and ticket API routes
 - `app/Http/Controllers/AuthController.php` — registration and JWT login
 - `app/Http/Controllers/TicketController.php` — validated, user-scoped ticket CRUD
+
+## React web client (Task 4)
+
+The standalone Vite + React client is in [`client/`](client/). It provides registration, login, customer ticket submission and searchable/filterable ticket history, plus an agent inbox with status updates. JWTs are saved in browser `localStorage` and attached to protected API calls with the Bearer authorization header.
+
+```sh
+cd client
+npm install
+copy .env.example .env
+npm run dev
+```
+
+Set `VITE_API_BASE_URL` to the API root ending in `/api` if using a different backend. In this monorepo use `client` as the Netlify base directory; in the standalone client repository use the repository root. Both use `npm run build` and `dist` as the publish directory. The included `netlify.toml` sets these values and the SPA fallback. Configure `CORS_ALLOWED_ORIGINS` on the API as a comma-separated list of deployed client origins; `*` is the development default. The client currently defaults to `https://taskflow-api.wasmer.app/api`.
+
+Agent replies are stored in a separate `ticket_replies` table and returned with ticket listings; the agent inbox posts to `POST /api/tickets/{id}/reply`.

@@ -12,8 +12,8 @@ class TicketController extends Controller
     public function index(Request $request): JsonResponse
     {
         $tickets = $request->user()->role === 'agent'
-            ? Ticket::query()->latest()->get()
-            : $request->user()->tickets()->latest()->get();
+            ? Ticket::query()->with('replies')->latest()->get()
+            : $request->user()->tickets()->with('replies')->latest()->get();
 
         return response()->json($tickets);
     }
@@ -37,7 +37,26 @@ class TicketController extends Controller
 
     public function show(Request $request, int $id): JsonResponse
     {
-        return response()->json($this->findForUser($request, $id));
+        return response()->json($this->findForUser($request, $id)->load('replies'));
+    }
+
+    public function reply(Request $request, int $id): JsonResponse
+    {
+        $ticket = $this->findForUser($request, $id);
+        $validator = Validator::make($request->all(), [
+            'message' => ['required', 'string', 'max:10000'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'The given data was invalid.', 'errors' => $validator->errors()], 400);
+        }
+
+        $reply = $ticket->replies()->create([
+            'user_id' => $request->user()->id,
+            'message' => trim($validator->validated()['message']),
+        ]);
+
+        return response()->json($reply->load('user:id,name,role'), 201);
     }
 
     public function update(Request $request, int $id): JsonResponse
